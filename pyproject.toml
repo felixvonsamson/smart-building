@@ -1,0 +1,31 @@
+[project]
+name = "smart-building"
+version = "0.1.0"
+description = "Energy system simulation and cost optimization for a house with PV, battery, EV, heat pump and thermal storage under variable electricity pricing."
+requires-python = ">=3.11"
+dependencies = [
+    "pandas>=2.2",
+    "numpy>=1.26",
+    "pyomo>=6.7",
+    "highspy>=1.7",
+    "pydantic>=2.6",
+    "pyyaml>=6.0",
+    "pvlib>=0.10",
+    "requests>=2.31",
+    "tsam>=2.3",
+    "streamlit>=1.32",
+    "plotly>=5.20",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "jupyter>=1.0",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+build/
+dist/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data (downloaded / generated, not versioned)
+data/raw/*
+data/interim/*
+data/processed/*
+!data/raw/.gitkeep
+!data/interim/.gitkeep
+!data/processed/.gitkeep
+
+# Solver / scratch
+*.log
+*.lp
+*.sol
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Claude Code local settings
+.claude/settings.local.json
