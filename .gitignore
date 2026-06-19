@@ -16,6 +16,8 @@ data/processed/*
 !data/raw/.gitkeep
 !data/interim/.gitkeep
 !data/processed/.gitkeep
+!data/processed/energy_balance_separated.csv
+!data/processed/ev_sessions.csv
 
 # Solver / scratch
 *.log

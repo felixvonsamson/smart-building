@@ -32,8 +32,24 @@ class SystemConfig(BaseModel):
     timestep_minutes: int = 5
 
 
+def _project_root() -> Path:
+    """Walk up from this file to find the directory containing pyproject.toml."""
+    d = Path(__file__).resolve().parent
+    while d != d.parent:
+        if (d / "pyproject.toml").exists():
+            return d
+        d = d.parent
+    return Path.cwd()
+
+
 def load_config(path: Path | str | None = None) -> SystemConfig:
-    if path is None:
-        return SystemConfig()
-    with open(path) as f:
-        return SystemConfig(**yaml.safe_load(f))
+    root = _project_root()
+    if path is not None:
+        path = root / path if not Path(path).is_absolute() else Path(path)
+        with open(path) as f:
+            cfg = SystemConfig(**yaml.safe_load(f))
+    else:
+        cfg = SystemConfig()
+    cfg.data_file = str(root / cfg.data_file)
+    cfg.ev.sessions_file = str(root / cfg.ev.sessions_file)
+    return cfg
