@@ -39,6 +39,17 @@ def build_model(
     m.batt_discharge = pyo.Var(m.T, within=pyo.NonNegativeReals, bounds=(0, batt.max_discharge_kw))
     m.soc = pyo.Var(m.T, bounds=(batt.soc_min_kwh, batt.soc_max_kwh))
 
+    # Prevent simultaneous battery charge/discharge
+    m.batt_dir = pyo.Var(m.T, within=pyo.Binary)
+
+    def batt_charge_limit_rule(m, t):
+        return m.batt_charge[t] <= batt.max_charge_kw * m.batt_dir[t]
+    m.batt_charge_limit = pyo.Constraint(m.T, rule=batt_charge_limit_rule)
+
+    def batt_discharge_limit_rule(m, t):
+        return m.batt_discharge[t] <= batt.max_discharge_kw * (1 - m.batt_dir[t])
+    m.batt_discharge_limit = pyo.Constraint(m.T, rule=batt_discharge_limit_rule)
+
     # --- Grid variables ---
     m.grid_import = pyo.Var(m.T, within=pyo.NonNegativeReals, bounds=(0, grid_max))
     m.grid_export = pyo.Var(m.T, within=pyo.NonNegativeReals, bounds=(0, grid_max))
