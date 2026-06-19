@@ -22,6 +22,9 @@ data/processed/*
 *.lp
 *.sol
 
+# Secrets
+.env
+
 # OS / editor
 .DS_Store
 .idea/

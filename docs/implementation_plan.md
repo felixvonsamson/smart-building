@@ -13,56 +13,47 @@ Status legend: `[ ]` not started, `[~]` in progress, `[x]` done.
 - [x] Virtual environment + install deps; verify Pyomo can call HiGHS on a trivial LP
 - [x] `git init` + initial commit
 
-## Phase 1 — Inputs & data ingestion
-- [ ] Pydantic config schema (`config.py`): PV, battery, EV, tank, heat pump,
-      annual demand targets, location, price zone
-- [ ] Example house config (`config/house_default.yaml`)
-- [ ] PV generation profile via `pvlib.iotools.get_pvgis_hourly` (per-kWp,
-      scaled by installed capacity), plus ambient temperature series
-- [ ] Electricity price series from Open Power System Data (day-ahead, by
-      bidding zone)
-- [ ] Synthetic electricity demand profile (standard load profile, scaled to
-      annual consumption)
-- [ ] Heating/DHW demand model (heating-degree based + stylized DHW profile,
-      scaled to annual heat demand)
-- [ ] Assemble aligned full-year hourly DataFrame (demand, heat demand, PV/kWp,
-      T_amb, price import/export)
-- [ ] Notebook: sanity-check annual sums and profile shapes
+## Phase 1 — Data & config
+- [~] Pydantic config schema (`config.py`): battery (20 kWh, 10 kW, ~88% eff),
+      EV charging, export tariff (0.14 CHF/kWh)
+- [~] Example house config (`config/house_default.yaml`)
+- [~] Data loader (`data_loader.py`): load `energy_balance_separated.csv` +
+      `ev_sessions.csv`, clean DST markers, coerce types, handle NaNs
 
-## Phase 2 — Representative days (tsam)
-- [ ] Cluster full-year DataFrame into ~8-12 typical days with weights
-- [ ] Validate against duration curves of original series
-- [ ] Persist representative days to `data/processed/`
+Data comes from FusionSolar (Huawei) measured data at 5-min resolution,
+2026-01-01 to 2026-06-18. Columns: PV generation, total/base/EV consumption,
+battery charge/discharge, variable electricity tariffs (CHF/kWh).
 
-## Phase 3 — Core optimization model (Pyomo)
-- [ ] COP(t) curve from ambient temperature
-- [ ] Tank energy capacity/bounds from volume + temperature range
-- [ ] Pyomo model: sets, parameters, variables, constraints (electrical
-      balance, thermal balance, battery/EV/tank dynamics + cyclic SOC, EV
-      availability, HP capacity, grid limits)
-- [ ] Objective: weighted annual cost across representative days
+## Phase 2 — Core optimization model (Pyomo)
+- [~] Pyomo LP model: optimize battery charge/discharge over full 6-month
+      period at 5-min resolution to minimize electricity cost under variable
+      import pricing (integrated tariff) and fixed export tariff (0.14 CHF/kWh)
+- [ ] Optional EV charging optimization: shift charging within session windows
+      (same total energy by departure, flexible timing/power profile)
 - [ ] Solve with HiGHS, extract results to tidy DataFrame
-- [ ] Toy validation case (e.g. battery-only price arbitrage)
+- [ ] Sanity-check: battery SOC stays within bounds, energy balance holds
 
-## Phase 4 — Baseline rule-based controller
-- [ ] Greedy self-consumption + thermostatic HP + immediate EV charging
-- [ ] Produces baseline cost per representative day for savings comparison
+## Phase 3 — Baseline & comparison
+- [~] Compute baseline cost from actual FusionSolar dispatch
+      (measured chargePower/dischargePower → grid import/export → cost)
+- [ ] Compare optimized vs baseline: total cost, savings, self-consumption rate
 
-## Phase 5 — Scenarios & KPIs
-- [ ] Scenario matrix: tariff type x assets present x control strategy
-- [ ] Batch runner across representative days, scale to annual via weights
-- [ ] KPIs: annual cost, savings %, self-consumption/self-sufficiency, peak
-      grid power
-- [ ] Persist scenario results to `data/processed/` (parquet)
+## Phase 4 — Scenarios & KPIs
+- [ ] Scenario matrix: with/without battery optimization, with/without EV
+      optimization, flat vs variable tariff
+- [ ] KPIs: total cost, savings %, self-consumption rate, self-sufficiency rate,
+      peak grid import
+- [ ] Persist scenario results (parquet)
 
-## Phase 6 — Streamlit dashboard
-- [ ] Overview page: config + annual input profiles
-- [ ] Representative days page: clustering results
+## Phase 5 — Streamlit dashboard
+- [ ] Overview page: config + input time series profiles
 - [ ] Daily detail page: stacked-area energy flows + Sankey "real-time flow"
       diagram with time slider
 - [ ] Scenario comparison page: KPI table + bar charts
 
-## Phase 7 — Extensions (optional)
+## Phase 6 — Extensions (optional)
+- [ ] Heat pump / thermal storage optimization
+- [ ] Representative days (tsam) for full-year scaling
 - [ ] Battery degradation cost term
 - [ ] Demand/peak-power charges
-- [ ] Sensitivity sweeps on system sizing (PV/battery/EV size)
+- [ ] Sensitivity sweeps on system sizing
