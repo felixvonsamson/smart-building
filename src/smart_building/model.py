@@ -9,16 +9,26 @@ def build_model(
     df: pd.DataFrame,
     cfg: SystemConfig,
     ev_sessions: pd.DataFrame | None = None,
+    price_import: np.ndarray | None = None,
+    price_export: np.ndarray | float | None = None,
 ) -> pyo.ConcreteModel:
     dt = cfg.timestep_minutes / 60  # hours per timestep
     n = len(df)
     pv = df["productPower"].values
     base_demand = df["base_power"].values
-    price_import = df[cfg.grid.import_tariff_column].values
-    price_export = cfg.grid.export_tariff_chf_kwh
     batt = cfg.battery
 
-    # Upper bound on grid power for big-M constraints
+    if price_import is None:
+        price_import = df[cfg.grid.import_tariff_column].values
+    if price_export is None:
+        price_export = cfg.grid.export_tariff_chf_kwh
+
+    # Broadcast scalar export price to array
+    if np.isscalar(price_export):
+        price_export_arr = np.full(n, price_export)
+    else:
+        price_export_arr = np.asarray(price_export)
+
     grid_max = float(max(base_demand.max() + batt.max_charge_kw + 15, pv.max() + batt.max_discharge_kw, 50))
 
     m = pyo.ConcreteModel()
@@ -34,7 +44,7 @@ def build_model(
     m.grid_export = pyo.Var(m.T, within=pyo.NonNegativeReals, bounds=(0, grid_max))
 
     # Prevent simultaneous import/export only where arbitrage is possible
-    arb_steps = [int(t) for t in range(n) if price_import[t] < price_export]
+    arb_steps = [int(t) for t in range(n) if price_import[t] < price_export_arr[t]]
     if arb_steps:
         m.arb_set = pyo.Set(initialize=arb_steps)
         m.grid_dir = pyo.Var(m.arb_set, within=pyo.Binary)
@@ -98,7 +108,7 @@ def build_model(
     # --- Objective ---
     m.cost = pyo.Objective(
         expr=sum(
-            (price_import[t] * m.grid_import[t] - price_export * m.grid_export[t]) * dt
+            (price_import[t] * m.grid_import[t] - price_export_arr[t] * m.grid_export[t]) * dt
             for t in m.T
         ),
         sense=pyo.minimize,
@@ -114,12 +124,21 @@ def solve_model(m: pyo.ConcreteModel, time_limit: int = 600):
     return solver.solve(m, tee=False)
 
 
-def extract_results(m: pyo.ConcreteModel, df: pd.DataFrame, cfg: SystemConfig) -> pd.DataFrame:
+def extract_results(
+    m: pyo.ConcreteModel,
+    df: pd.DataFrame,
+    price_import: np.ndarray,
+    price_export: np.ndarray | float,
+) -> pd.DataFrame:
     n = len(df)
     results = pd.DataFrame(index=df.index)
     results["pv_kw"] = df["productPower"].values
     results["base_demand_kw"] = df["base_power"].values
-    results["price_import"] = df[cfg.grid.import_tariff_column].values
+    results["price_import"] = price_import
+    if np.isscalar(price_export):
+        results["price_export"] = price_export
+    else:
+        results["price_export"] = price_export
     results["batt_charge_kw"] = [pyo.value(m.batt_charge[t]) for t in range(n)]
     results["batt_discharge_kw"] = [pyo.value(m.batt_discharge[t]) for t in range(n)]
     results["soc_kwh"] = [pyo.value(m.soc[t]) for t in range(n)]
