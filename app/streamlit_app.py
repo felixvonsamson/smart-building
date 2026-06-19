@@ -224,9 +224,4 @@ daily_table = pd.DataFrame({
 daily_table.index = daily_table.index.date
 daily_table.index.name = "Date"
 
-st.dataframe(
-    daily_table.style.format({
-        c: "{:.2f}" for c in daily_table.columns
-    }).background_gradient(subset=["Savings (CHF)"], cmap="RdYlGn"),
-    use_container_width=True,
-)
+st.dataframe(daily_table.round(2), use_container_width=True)
